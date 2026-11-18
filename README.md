@@ -1,5 +1,38 @@
 # Grid Bot — BTC/EUR op Bitvavo (backtest & paper-trading)
 
+## Waarom we dit bouwen
+
+Dankzij AI-coding tools (*vibecoding*) is software schrijven sneller en toegankelijker dan ooit. Bij algorithmic trading zit de echte uitdaging alleen niet in **hoe** je code schrijft, maar in **wat** je bouwt — zodat je niet ten onder gaat aan de klassieke beginnersfouten:
+
+- de koersrichting proberen te raden met een LLM,
+- overfitten op ruis,
+- fees negeren.
+
+In dit project bouwen we daarom stap voor stap, vanaf de keukentafel, aan een professioneel en modulair handelssysteem op Bitvavo (`BTC/EUR`). Met de risicodiscipline van een quant, maar zonder dat je supercomputers of nanoseconden-latency nodig hebt.
+
+Alles draait in een veilige **backtest-, replay- en paper-trading sandbox**: publieke marktdata, geen API-keys, geen echt geld. Zo kan iedereen veilig experimenteren, meten en van elkaar leren.
+
+## Over AI Melo
+
+[AI Melo](https://aimelo.nl) is dé AI-community uit Almelo voor bouwers, ondernemers en tech-enthousiastelingen die niet alleen over AI willen praten, maar er vooral samen mee willen bouwen. Binnen de **AI Melo Trade Group** combineren we praktijkervaring uit de financiële markten met moderne AI- en data-engineering.
+
+## De 4 Deep Dive sessies (onze roadmap)
+
+| Sessie | Thema | Wat we doen |
+|---|---|---|
+| **Deep Dive 1** | **De Motor** — deterministische grid bot | We bouwen het fundament op Bitvavo `BTC/EUR`. Geen koersvoorspellingen, maar volatiliteit oogsten met een `25% actief / 75% reserve` kapitaalverdeling, een dynamische fee-vloer, `postOnly` maker-simulatie en eerlijke benchmarks. |
+| **Deep Dive 2** | **De Reflexen** — multi-exchange WebSockets & streaming ML | We geven de bot ogen door meerdere publieke WebSocket-feeds te combineren (Bitvavo + Kraken) en voegen een lichtgewicht online machine learning-laag (`River`) toe die lokale ruis onderscheidt van wereldwijde bewegingen. |
+| **Deep Dive 3** (met SoulSwarm) | **Risicobeheer, validatie & community leaderboard** + het geweten | Meten is weten. We duiken in shadow-mode testen, markouts op meerdere tijdshorizonten en harde inventory-drift limieten, en zetten een gezamenlijk AI Melo leaderboard op met echte quant-metrics (Grid-Alpha, Sharpe Ratio en Max Drawdown). En: hoe geef je een trading bot breder wereldbewustzijn zonder dat een taalmodel met je geld gaat hallucineren? We koppelen een *silence-first* AI-toezichthouder ([SoulSwarm](https://soulswarm.com/)) die het meerdaagse marktregime bewaakt en alleen ingrijpt (verbreden of pauzeren) wanneer de markt aantoonbaar uit zijn ritme loopt. |
+| **Deep Dive 4** | **Het Geweten** — grand finale | We kijken wie de meeste Alpha heeft gegenereerd op zijn inleg, dus met ECHT geld. De winnaar krijgt een prijs! Frank vormt in zijn eentje een team. Succes :) |
+
+**Deze repository is het resultaat van Deep Dive 1.** Alles wat hieronder staat beschrijft die motor.
+
+> **Educatieve disclaimer.** Deze repository is uitsluitend bedoeld voor educatieve doeleinden, onderzoek en paper-trading binnen de AI Melo community. Niets hierin is financieel advies.
+
+---
+
+## Wat zit er in deze repository?
+
 Een deterministische **spot grid trading bot** voor `BTC/EUR` op Bitvavo, met een webinterface. Je kunt ermee:
 
 - **backtesten** op echte historische koersen,
@@ -430,6 +463,9 @@ bitvavo_grid_bot/
 ├── requirements.txt       Benodigde pakketten
 ├── conftest.py            Hulpbestand voor de tests
 ├── tests/                 Geautomatiseerde tests
+│
+├── prompt/                De oorspronkelijke opdracht en de chatgeschiedenis van de bouw
+├── monitor/               Losse HTML-pagina "Grid Trading Simulator" uit de presentatie
 │
 ├── data/                  Wordt automatisch aangemaakt
 │   ├── settings.json            je instellingen
