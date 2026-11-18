@@ -1,0 +1,126 @@
+Fase 0 is klaar: alle vier watch-streams en de marktdata van Bitvavo werken live, en het maker-tarief neem ik uit load_markets, tenzij er een BITVAVO_API_KEY is. Volgende stap is de config en de pure grid-engine.
+
+Engine staat, 36 van 42 tests groen; ik los nu de laatste zes op (volgorde van guard-redenen en één fout opgezette test).
+
+Benchmarks, resultaten en backtester staan. Nu de live-kant: exchange-manager, recorder en paper-runner.
+
+De volledige end-to-end run werkt: de Fase 0-check en de 90-daagse backtest (128.534 candles) slagen, nu test ik de live-kant en bekijk ik het dashboard.
+
+47 tests groen en beide replay-formaten werken. Laatste stap: het dashboard visueel controleren.
+
+Paginaminiatuur
+Grid Bot BTC/EUR · Backtest · candles
+localhost:8765, geopend in de browser
+De bot is gebouwd en draait end-to-end: Fase 0-check, 90-daagse backtest, WebSocket-opname, tick-replay en een live paper-sessie met Ctrl+C-afsluiting, elk met dashboard. De 47 tests zijn groen.
+
+Wat niet is aangetoond
+Live fills: in de paper-test van 75 seconden vielen geen fills (de koers bewoog €15, de kleinste toegestane stap is €85). Het fill-pad is alleen getest met unit-tests en een synthetische tick-replay.
+Reconnect en staleness: de code is er (backoff, pauzeren van fills), maar er is geen echte verbindingsstoring opgetreden om het tegen te testen.
+Hervatten: de paper-runner slaat zijn staat elke 30 s op als JSON, maar kan een sessie daar niet uit hervatten.
+Eerste backtest (90 dagen, 1m-candles, BTC −8,15%)
+Strategie	Eindwaarde	Rendement
+25/75 Grid Bot	€ 9.607,95	−3,92%
+50/50 Herbalanceren	€ 9.624,30	−3,76%
+50/50 Stil	€ 9.592,63	−4,07%
+100% BTC	€ 9.185,26	−8,15%
+De Grid-Alpha is −€ 16,36: op het standaardtarief van 0,15% maker verslaat de bot in deze periode het simpele dagelijks herbalanceren niet. Er waren 434 cycli met gemiddeld € 0,25 winst, tegenover € 166 aan fees. Met 0% maker fee en 0,3% stap was de alpha ook negatief (−€ 11).
+
+De BTC-voorraad groeide 45% en de EUR-voorraad kromp 41%: in een daling koopt het meeschuivende grid BTC bij. De “beide voorraden groeien”-eigenschap geldt per afgeronde cyclus, niet over een trend.
+
+Keuzes die ik heb gemaakt
+Geometrisch grid: vaste procentuele stap (standaard 0,5%), zodat de fee-vloer ook na ver meeschuiven blijft gelden.
+Winstverdeling: de sell wordt zo geschaald dat de nettowinst na fees 50/50 over BTC en EUR verdeeld wordt (profit_split_btc).
+Trailing: het venster schuift één stap zodra de buitenste order vult. Springt de koers in één tick voorbij het volgende niveau, of stopt een guard het meeschuiven, dan blijft het grid staan tot de koers terugkomt. In de backtest stond het venster daardoor ongeveer een maand stil onder de koers, omdat de 25%-ondergrens was bereikt.
+Drift-breaker: geldt voor elke order, niet alleen voor trailing; rustende orders die de 25–75%-grens zouden doorbreken worden geannuleerd.
+Fill-model: een trade moet dóór de limietprijs printen (conservatief); --fill-on-touch versoepelt dat.
+Candle-replay: binnen een candle wordt het pad open→low→high→close (of omgekeerd bij een dalende candle) aangenomen.
+Herbalanceer-benchmark: betaalt dezelfde maker fee als het grid.
+Extra bestanden: results.py (gedeelde resultaten en KPI’s), conftest.py en een tweede testbestand, bovenop de gevraagde structuur.
+Gebruik
+Vanuit bitvavo_grid_bot/:
+
+.venv/bin/python main.py backtest --days 90 --open
+zsh: no such file or directory: .venv/bin/python
+.venv/bin/python main.py paper --open
+.venv/bin/python main.py record-ws --duration 3600
+Het dashboard van de backtest staat open in het browserpaneel; het bestand is dashboard_backtest_candles_20261118_194636.html. Plotly zit erin (circa 6 MB); --cdn maakt het bestand klein maar vereist internet.
+
+Dat commando draaide vanuit /Users/frankoonk/Code/gridtrading, terwijl de virtualenv één map dieper staat. Ga eerst naar de projectmap:
+
+cd /Users/frankoonk/Code/gridtrading/bitvavo_grid_bot
+(geen uitvoer)
+Daarna werkt het commando zoals het er stond:
+
+.venv/bin/python main.py backtest --days 90 --open
+De bot moet vanuit die map draaien: data/ en reports/ zijn relatieve paden, dus vanuit een andere map zou hij de candle-cache niet vinden en de rapporten elders wegschrijven.
+
+Je staat nu in de projectmap. De backtest start je met:
+
+.venv/bin/python main.py backtest --days 90 --open
+       10 candles t/m 2026-11-18 19:55
+Backtest op 128534 1m-candles…
+Klaar in 3.2s
+
+  Periode                       2026-08-20 19:56 → 2026-11-18 19:55 UTC
+  BTC/EUR                       € 62.196 → € 57.198 (-8.04%)
+  Maker fee / grid-stap         0.150% (Bitvavo API, standaardtier) / 0.500%
+  Grid Bot                      € 10.000,00 → € 9.617,55 (-3.82%)
+  50/50 Herbalanceren           € 9.630,03 (-3.70%)
+  50/50 Stil                    € 9.598,21 (-4.02%)
+  100% BTC                      € 9.196,41 (-8.04%)
+  Grid-Alpha vs herbalanceren   € -12,48 (-0.12%-punt)
+  BTC-voorraad                  0.08039102 → 0.11698091 (+45.51%)
+  EUR-voorraad                  € 5.000,00 → € 2.926,47 (-41.47%)
+  Cycli / fills                 440 / 897 (457 buy, 440 sell)
+  Fees / gem. winst per cyclus  € 168,52 / € 0,25
+  Sharpe / max drawdown         -1.06 / -11.90%
+  Trailing ↑/↓ / guard-stops    12 / 22 / 13
+
+Dashboard: /Users/frankoonk/Code/gridtrading/bitvavo_grid_bot/reports/dashboard_backtest_candles_20261118_195543.html
+De backtest draait nu bij jou en het dashboard is in je browser geopend. De cijfers wijken licht af van mijn eerdere run (alpha −€ 12,48 in plaats van −€ 16,36) omdat het venster van 90 dagen negen minuten is opgeschoven: andere startkoers, dus een iets ander grid. Het beeld is hetzelfde: op 0,15% maker fee blijft de bot net onder dagelijks herbalanceren.
+
+De 3,2 s tegenover 29 s eerder komt doordat de candles nu uit de lokale cache komen; alleen de laatste 10 zijn bijgehaald.
+
+Als je wilt zien wat de instellingen doen, zijn dit de twee knoppen met het meeste effect:
+
+.venv/bin/python main.py backtest --days 90 --step 0.01 --open
+.venv/bin/python main.py backtest --days 90 --min-btc-weight 0.15 --max-btc-weight 0.85 --open
+De eerste verdubbelt de grid-stap (minder cycli, meer winst per cyclus ten opzichte van de fee), de tweede geeft het grid meer ruimte om mee te schuiven voordat de drift-limiet het stilzet.
+
+Dit snap ik allemaal niet, ik wil dat alles via de GUI bedient kan worden. Ik wil geen aparte venv omgeving, ik wil gewoon een server kunnen starten en alleen in de gui bezig zijn.
+
+Duidelijk: de terminal-commando’s waren te veel gevraagd. Ik bouw er een webinterface omheen: één keer starten (dubbelklikken), daarna doe je alles in de browser — instellingen, backtests, paper-trading, opnames en rapporten. De losse .venv verdwijnt; de starter regelt de benodigdheden zelf op de achtergrond.
+
+Uitgevoerd een opdracht, aangemaakt server.py
+Server-kant is klaar; nu schrijf ik de pagina zelf (de eigenlijke GUI).
+
+Paginaminiatuur
+Grid Bot
+localhost:8642, geopend in de browser
+Aangemaakt en bewerkte gui.html, uitgevoerd een opdracht, Voorbeeld gestopt, en nog 5 acties
+Bijna klaar: backtest en paper-trading werken in de browser. Ik herstel nog een fout in de live-grafiek en twee kleine tekstpunten, en test dan de opnamepagina.
+
+Opgeslagen 2 herinneringen, uitgevoerd 2 opdrachten, Opened, ran page script, waited +4, Voorbeeld gestopt
+De bot heeft nu een webinterface: je start hem één keer en doet daarna alles in de browser. De aparte .venv is weg.
+
+Starten
+Dubbelklik in Finder op start.command in de map bitvavo_grid_bot. Er opent een Terminal-venster dat je open laat staan, en de browser opent vanzelf op http://localhost:8642. De eerste keer duurt het starten iets langer, omdat de benodigdheden dan worden opgehaald.
+
+Stoppen doe je met de knop Server stoppen onder Instellingen.
+
+Wat je in de browser kunt
+Overzicht: korte uitleg, of Bitvavo bereikbaar is, en het laatste resultaat in gewone taal.
+Backtest: kies een periode (1 week tot 1 jaar) en klik op Start. De koersdata wordt zelf opgehaald. Je krijgt een samenvatting in één zin plus een knop naar het volledige rapport.
+Paper-trading: Start en Stop. Terwijl het loopt zie je live de koers, de waarde, de openstaande orders en de transacties. Bij stoppen wordt een rapport gemaakt.
+Opnemen: optioneel, live marktdata opnemen en daar later een backtest op draaien.
+Rapporten: alle eerdere runs; klik op een regel om het rapport te openen.
+Instellingen: startkapitaal, aantal orders, afstand tussen orders en de veiligheidsgrenzen, elk met een regel uitleg.
+Wat ik wel en niet heb getest
+Ik heb in de browser een backtest over 3 maanden gedraaid, paper-trading gestart en gestopt, een opname gemaakt en daarop een backtest gedraaid, en de verbindingstest uitgevoerd. Dat werkte allemaal.
+
+Niet getest:
+
+De dubbelklik zelf: ik heb start.command gestart, maar niet vanuit Finder. Mocht macOS hem bij de eerste keer blokkeren: rechtsklik op het bestand en kies Open.
+De knop Server stoppen en de knoppen met een bevestigingsvraag (stoppen, verwijderen): die heb ik niet aangeklikt; het stoppen en verwijderen zelf heb ik rechtstreeks aangeroepen.
+Paper-trading met echte transacties: in mijn korte tests bewoog de koers te weinig voor een transactie. Dat deel van het live scherm heb ik dus alleen leeg gezien.
+De drie rapporten van vóór de GUI staan nog in de lijst, maar zonder cijfers in de kolommen; openen werkt gewoon.
