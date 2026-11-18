@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Grid Bot</title>
+<style>
+:root{--page:#0d0d0d;--surface:#1a1a19;--raise:#222220;--line:#2c2c2a;--ink:#f0efec;--ink2:#c3c2b7;--muted:#898781;
+  --blue:#3987e5;--orange:#d95926;--good:#0ca30c;--bad:#e66767;--warn:#fab219;--violet:#9085e9}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--page);color:var(--ink);font:14.5px/1.5 Inter,-apple-system,'Segoe UI',Roboto,sans-serif;display:flex}
+nav{width:216px;flex:none;background:var(--surface);border-right:1px solid var(--line);padding:20px 12px;display:flex;flex-direction:column;gap:2px;position:sticky;top:0;height:100vh}
+nav .brand{font-weight:650;font-size:16px;padding:0 10px 2px}
+nav .sub{color:var(--muted);font-size:12px;padding:0 10px 16px}
+nav a{display:flex;align-items:center;justify-content:space-between;color:var(--ink2);text-decoration:none;padding:9px 10px;border-radius:8px;cursor:pointer}
+nav a:hover{background:var(--raise)}
+nav a.on{background:var(--raise);color:var(--ink);font-weight:600}
+nav .dot{width:8px;height:8px;border-radius:50%;background:var(--good);display:none}
+nav a.busy .dot{display:block;animation:pulse 1.4s infinite}
+nav .foot{margin-top:auto;color:var(--muted);font-size:12px;padding:10px}
+@keyframes pulse{50%{opacity:.25}}
+main{flex:1;min-width:0;padding:28px 32px 60px;max-width:1280px}
+h1{font-size:22px;font-weight:650;margin:0 0 4px;letter-spacing:-.01em}
+h2{font-size:15px;font-weight:600;margin:0 0 8px}
+p.lead{color:var(--ink2);margin:0 0 20px;max-width:760px}
+.page{display:none}.page.on{display:block}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:16px;min-width:0}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:13px 15px;min-width:0}
+.card .l{color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em}
+.card .v{font-size:22px;font-weight:650;font-variant-numeric:tabular-nums;margin:3px 0 1px;white-space:nowrap}
+.card .s{color:var(--ink2);font-size:12.5px;font-variant-numeric:tabular-nums}
+.up{color:var(--good)}.down{color:var(--bad)}.arrow{font-size:.55em;vertical-align:middle;margin-right:6px}
+button,.btn{background:var(--raise);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:8px 14px;font:inherit;cursor:pointer}
+button:hover{border-color:#44443f}
+button.primary{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600;padding:10px 20px}
+button.danger{border-color:#6b3030;color:#f0b4b4}
+button.small{padding:4px 10px;font-size:13px}
+button:disabled{opacity:.45;cursor:default}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips button.on{border-color:var(--blue);background:#17263b}
+label{display:block;color:var(--ink2);font-size:13px;margin-bottom:4px}
+input,select{background:var(--page);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:8px 10px;font:inherit;width:100%}
+input[type=checkbox]{width:auto;margin-right:8px}
+.field{margin-bottom:14px}.field .help{color:var(--muted);font-size:12.5px;margin-top:4px}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:4px 28px}
+.withunit{display:flex;align-items:center;gap:8px}.withunit span{color:var(--muted);min-width:22px}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th{color:var(--muted);font-weight:500;font-size:12px;text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap;position:sticky;top:0;background:var(--surface)}
+td{padding:7px 10px;border-bottom:1px solid #232321;color:var(--ink2);white-space:nowrap}
+.num{text-align:right}
+.scroll{max-height:340px;overflow:auto}
+.muted{color:var(--muted)}.note{color:var(--muted);font-size:12.5px}
+.badge{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:1px 10px;font-size:12px;color:var(--ink2)}
+.badge.ok{border-color:#1d5a1d;color:#9ad69a}.badge.warn{border-color:#6e5210;color:#f3d48a}.badge.err{border-color:#6b3030;color:#f0b4b4}
+.msg{border-radius:8px;padding:10px 14px;margin-bottom:14px;border:1px solid var(--line);background:var(--raise)}
+.msg.err{border-color:#6b3030;color:#f0b4b4}.msg.ok{border-color:#1d5a1d}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.log{font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ink2);max-height:180px;overflow:auto;white-space:pre-wrap}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.steps .panel{margin:0;cursor:pointer}.steps .panel:hover{border-color:#44443f}
+.steps b{display:block;margin-bottom:4px}
+.verdict{font-size:15.5px;color:var(--ink);margin:0 0 14px;max-width:820px}
+#viewer iframe{width:100%;height:calc(100vh - 110px);border:1px solid var(--line);border-radius:10px;background:var(--page)}
+.side.buy{color:var(--good)}.side.sell{color:var(--bad)}
+details{margin-top:6px}summary{cursor:pointer;color:var(--ink2)}
+#toast{position:fixed;right:20px;bottom:20px;background:var(--raise);border:1px solid var(--line);border-radius:10px;padding:12px 16px;display:none;max-width:420px;z-index:9}
+#toast.err{border-color:#6b3030;color:#f0b4b4}
+@media(max-width:900px){body{display:block}nav{width:auto;height:auto;position:static;flex-direction:row;flex-wrap:wrap}nav .foot,nav .sub{display:none}main{padding:18px}.two{grid-template-columns:minmax(0,1fr)}}
+</style>
+<script src="/plotly.js"></script>
+</head>
+<body>
+<nav>
+  <div class="brand">Grid Bot</div><div class="sub">BTC/EUR · Bitvavo · oefenmodus</div>
+  <a data-page="home">Overzicht<span class="dot"></span></a>
+  <a data-page="backtest">Backtest<span class="dot"></span></a>
+  <a data-page="paper">Paper-trading<span class="dot"></span></a>
+  <a data-page="record">Opnemen<span class="dot"></span></a>
+  <a data-page="reports">Rapporten<span class="dot"></span></a>
+  <a data-page="settings">Instellingen<span class="dot"></span></a>
+  <div class="foot" id="conn">verbinden…</div>
+</nav>
+<main>
+
+<section class="page" id="home">
+  <h1>Overzicht</h1>
+  <p class="lead">Deze bot legt koop- en verkooporders in een raster ("grid") rond de bitcoinkoers. Elke keer dat de koers een stapje daalt en weer stijgt, verdient hij een klein beetje. Hij voorspelt niets. Alles hier is <b>oefenen met nepgeld</b>: er worden nooit echte orders geplaatst.</p>
+  <div class="steps">
+    <div class="panel" data-go="backtest"><b>1 · Backtest</b><span class="muted">Speel de afgelopen weken of maanden na en zie wat de bot gedaan zou hebben. Klaar in seconden.</span></div>
+    <div class="panel" data-go="paper"><b>2 · Paper-trading</b><span class="muted">Laat de bot live meelopen met de echte koers, met nepgeld. Zolang je wilt.</span></div>
+    <div class="panel" data-go="reports"><b>3 · Rapporten</b><span class="muted">Na elke run staat hier een rapport met grafieken en alle transacties.</span></div>
+  </div>
+  <div style="height:16px"></div>
+  <div class="grid" id="home-cards"></div>
+  <div class="panel"><h2>Laatste rapport</h2><div id="home-last"></div></div>
+</section>
+
+<section class="page" id="backtest">
+  <h1>Backtest</h1>
+  <p class="lead">Naspelen op echte koersen uit het verleden. De koersdata wordt automatisch opgehaald en lokaal bewaard, dus een tweede keer gaat sneller.</p>
+  <div class="panel">
+    <div class="field"><label>Periode</label><div class="chips" id="bt-days"></div></div>
+    <div class="field" style="max-width:360px"><label>Nauwkeurigheid</label>
+      <select id="bt-tf"><option value="1m">Hoog — koers per minuut (aanbevolen)</option><option value="5m">Sneller — per 5 minuten</option><option value="1h">Grof — per uur</option></select>
+      <div class="help">Hoe fijner, hoe eerlijker het resultaat. Bij "per minuut" duurt de eerste download van een lange periode een paar minuten.</div></div>
+    <div class="row"><button class="primary" id="bt-start">Start backtest</button><span class="note" id="bt-settings"></span></div>
+  </div>
+  <div id="bt-status"></div>
+</section>
+
+<section class="page" id="paper">
+  <h1>Paper-trading</h1>
+  <p class="lead">De bot loopt live mee met de echte Bitvavo-koers en doet alsof hij handelt. Laat deze pagina (en de server) open staan; bij stoppen wordt een rapport gemaakt. Reken op uren tot dagen voordat er genoeg transacties zijn om iets van te vinden.</p>
+  <div id="paper-top"></div>
+  <div id="paper-live" style="display:none">
+    <div class="grid" id="paper-cards"></div>
+    <div class="panel"><h2>Koers en raster</h2><div class="note" style="margin-bottom:6px">Grijze lijn = koers · paarse band = het actieve raster · ▲ gekocht · ▼ verkocht</div><div id="paper-chart" style="height:340px"></div></div>
+    <div class="two">
+      <div class="panel"><h2>Openstaande orders</h2><div class="scroll"><table><thead><tr><th>Soort</th><th class="num">Prijs</th><th class="num">BTC</th><th class="num">Waarde</th></tr></thead><tbody id="paper-orders"></tbody></table></div></div>
+      <div class="panel"><h2>Laatste transacties</h2><div class="scroll"><table><thead><tr><th>Tijd</th><th>Soort</th><th class="num">Prijs</th><th class="num">Waarde</th><th class="num">Winst ronde</th></tr></thead><tbody id="paper-fills"></tbody></table></div></div>
+    </div>
+  </div>
+  <div class="panel" id="paper-logbox" style="display:none"><details><summary>Logboek</summary><div class="log" id="paper-log"></div></details></div>
+</section>
+
+<section class="page" id="record">
+  <h1>Opnemen</h1>
+  <p class="lead">Optioneel, voor gevorderden. Neemt de live marktdata op (beste bied- en laatprijs plus elke transactie), zodat je daar later een extra nauwkeurige backtest op kunt draaien. Voor een gewone backtest heb je dit niet nodig.</p>
+  <div class="panel">
+    <div class="row">
+      <div style="width:230px"><label>Duur</label><select id="rec-min"><option value="10">10 minuten</option><option value="60" selected>1 uur</option><option value="480">8 uur</option><option value="1440">24 uur</option><option value="">Tot ik stop</option></select></div>
+      <div style="align-self:flex-end"><button class="primary" id="rec-start">Start opname</button> <button class="danger" id="rec-stop" style="display:none">Stop opname</button></div>
+    </div>
+    <div id="rec-status" style="margin-top:14px"></div>
+  </div>
+  <div class="panel"><h2>Opnames</h2><div id="rec-list"></div></div>
+</section>
+
+<section class="page" id="reports">
+  <h1>Rapporten</h1>
+  <p class="lead">Elke backtest en elke paper-sessie levert één rapport op. "Extra t.o.v. herbalanceren" is het eerlijkste getal: hoeveel de bot méér (of minder) opleverde dan simpelweg elke dag je bitcoin en euro's weer gelijk trekken.</p>
+  <div class="panel"><div id="rep-list"></div></div>
+</section>
+
+<section class="page" id="viewer">
+  <div class="row" style="margin-bottom:12px"><button id="view-back">← Terug</button><a class="btn" id="view-tab" target="_blank" style="text-decoration:none">Open in nieuw tabblad</a><span class="note" id="view-name"></span></div>
+  <iframe id="view-frame" title="Rapport"></iframe>
+</section>
+
+<section class="page" id="settings">
+  <h1>Instellingen</h1>
+  <p class="lead">Gelden voor de volgende backtest of paper-sessie die je start. De standaardwaarden zijn een redelijk beginpunt; je hoeft hier niets aan te passen om te beginnen.</p>
+  <div class="panel">
+    <div class="form" id="set-form"></div>
+    <div class="msg" id="set-derived"></div>
+    <div class="row"><button class="primary" id="set-save">Opslaan</button><button id="set-reset">Standaardwaarden</button><span class="note" id="set-note"></span></div>
+  </div>
+  <div class="panel"><h2>Verbinding met Bitvavo</h2>
+    <p class="note" style="margin-top:0">Controleert of de koersdata en de live stream bereikbaar zijn. Er is geen account of API-sleutel nodig.</p>
+    <div class="row"><button id="check-run">Test verbinding</button><span id="check-out"></span></div></div>
+  <div class="panel"><h2>Server</h2>
+    <p class="note" style="margin-top:0">Stopt het programma. Een lopende paper-sessie wordt eerst netjes afgesloten en krijgt nog een rapport.</p>
+    <button class="danger" id="srv-stop">Server stoppen</button></div>
+</section>
+
+</main>
+<div id="toast"></div>
+
+<script>
+let S = null, page = 'home', btDays = 90, formFilled = false, lastChartKey = '';
+const $ = id => document.getElementById(id);
+const nf = d => new Intl.NumberFormat('nl-NL', {minimumFractionDigits: d, maximumFractionDigits: d});
+const eur = (v, d = 2) => (v < 0 ? '−' : '') + '€ ' + nf(d).format(Math.abs(v));
+const seur = (v, d = 2) => (v >= 0 ? '+' : '−') + '€ ' + nf(d).format(Math.abs(v));
+const pct = (v, d = 2) => (v >= 0 ? '+' : '−') + nf(d).format(Math.abs(v)) + '%';
+const num = (v, d = 0) => nf(d).format(v);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+const when = iso => new Date(iso).toLocaleString('nl-NL', {day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'});
+const day = iso => new Date(iso).toLocaleDateString('nl-NL', {day: 'numeric', month: 'short', year: 'numeric'});
+const clock = ms => new Date(ms).toLocaleTimeString('nl-NL');
+const dur = s => s < 90 ? Math.round(s) + ' s' : s < 5400 ? Math.round(s / 60) + ' min' : s < 172800 ? nf(1).format(s / 3600) + ' uur' : nf(1).format(s / 86400) + ' dagen';
+const size = b => b < 1e6 ? num(b / 1e3) + ' kB' : nf(1).format(b / 1e6) + ' MB';
+const MODE = {'backtest-candles': 'Backtest', 'backtest-ticks': 'Backtest op opname', 'paper': 'Paper-trading'};
+const card = (l, v, s = '', trend = null) => `<div class="card"><div class="l">${l}</div><div class="v">${trend === null || Math.abs(trend) < 1e-9 ? '' : `<span class="arrow ${trend > 0 ? 'up' : 'down'}">${trend > 0 ? '▲' : '▼'}</span>`}${v}</div><div class="s">${s}</div></div>`;
+
+function toast(text, err = false) {
+  const t = $('toast'); t.textContent = text; t.className = err ? 'err' : ''; t.style.display = 'block';
+  clearTimeout(toast.timer); toast.timer = setTimeout(() => t.style.display = 'none', err ? 7000 : 3000);
+}
+async function api(path, body) {
+  const res = await fetch(path, body === undefined ? {} : {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+  const data = await res.json();
+  if (!res.ok) { toast(data.error || 'Er ging iets mis', true); throw new Error(data.error); }
+  if (data.settings) { S = data; render(); }
+  return data;
+}
+function go(p) {
+  page = p; if (location.hash !== '#' + p) history.replaceState(null, '', '#' + p);
+  document.querySelectorAll('.page').forEach(e => e.classList.toggle('on', e.id === p));
+  document.querySelectorAll('nav a').forEach(a => a.classList.toggle('on', a.dataset.page === p || (p === 'viewer' && a.dataset.page === 'reports')));
+  if (p === 'paper') lastChartKey = '';
+  render();
+}
+function openReport(file) {
+  $('view-frame').src = '/reports/' + encodeURIComponent(file); $('view-tab').href = '/reports/' + encodeURIComponent(file);
+  $('view-name').textContent = file; go('viewer');
+}
+
+/* ---------- shared: plain-language result of a finished run ---------- */
+function verdict(r) {
+  const head = `De bot eindigde op <b>${eur(r.final_equity)}</b> (${pct(r.return_pct)}), terwijl de bitcoinkoers ${pct(r.price_change_pct)} deed. `;
+  if (!r.n_fills) return head + 'Er zijn in deze periode nog geen transacties geweest, dus er valt nog niets te concluderen. Laat de bot langer lopen.';
+  const better = r.alpha_eur >= 0;
+  return head + `Simpel dagelijks herbalanceren kwam uit op ${pct(r.rebalance_return_pct)}; het raster leverde dus <b>${eur(Math.abs(r.alpha_eur))} ${better ? 'extra op' : 'minder op'}</b>. ` +
+    (better ? 'In deze periode voegde het raster iets toe.' : 'In deze periode voegde het raster niets toe.');
+}
+function resultPanel(r, title) {
+  return `<div class="panel"><h2>${title}</h2><p class="verdict">${verdict(r)}</p>
+    <div class="grid" style="margin-bottom:14px">
+      ${card('Eindwaarde', eur(r.final_equity), `start ${eur(r.start_capital)} · ${pct(r.return_pct)}`, r.pnl)}
+      ${card('Extra t.o.v. herbalanceren', seur(r.alpha_eur), pct(r.alpha_pct) + '-punt', r.alpha_eur)}
+      ${card('Afgeronde rondes', num(r.n_cycles), num(r.n_fills) + ' transacties')}
+      ${card('Betaalde kosten', eur(r.fees_eur), 'handelskosten (' + nf(2).format(r.maker_fee * 100) + '%)')}
+      ${card('Grootste dip', nf(2).format(Math.abs(r.max_drawdown_pct)) + '%', 'vanaf hoogste punt')}
+    </div>
+    <button class="primary" onclick="openReport('${esc(r.file)}')">Bekijk volledig rapport</button></div>`;
+}
+
+/* ---------- pages ---------- */
+function renderHome() {
+  const d = S.derived, p = S.paper, m = S.market;
+  $('home-cards').innerHTML =
+    card('Bitvavo', m ? 'Verbonden' : (S.market_error ? 'Geen verbinding' : 'Bezig…'), m ? `kleinste order ${eur(m.min_cost)}` : esc(S.market_error || '')) +
+    card('Handelskosten', nf(2).format(d.maker_fee * 100) + '%', esc(d.fee_source || 'standaard')) +
+    card('Per order', eur(d.order_size_eur), `${S.settings.orders_per_side} kopen + ${S.settings.orders_per_side} verkopen`) +
+    card('Paper-trading', p.status === 'running' ? 'Loopt' : 'Staat uit', p.status === 'running' && p.live ? `${num(p.live.n_fills)} transacties · ${dur(S.now - p.started)}` : 'start op de pagina Paper-trading');
+  const last = S.reports.find(r => r.final_equity !== undefined);
+  $('home-last').innerHTML = last ? `<p class="verdict">${verdict(last)}</p><div class="row"><button onclick="openReport('${esc(last.file)}')">Bekijk rapport</button><span class="note">${MODE[last.mode] || last.mode} · ${day(last.start)} – ${day(last.end)}</span></div>`
+    : '<span class="muted">Nog geen rapporten. Begin met een backtest.</span>';
+}
+
+function renderBacktest() {
+  const b = S.backtest, d = S.derived, running = b.status === 'running';
+  $('bt-start').disabled = running;
+  $('bt-settings').innerHTML = `Met de huidige instellingen: ${eur(S.settings.initial_capital_eur, 0)} startkapitaal, stap ${nf(2).format(d.effective_step_pct * 100)}%, ${eur(d.order_size_eur)} per order. <a href="#settings" style="color:var(--blue)">Aanpassen</a>`;
+  let h = '';
+  if (running) h = `<div class="msg"><span class="spinner"></span><b>Bezig…</b> ${esc(b.messages[b.messages.length - 1] || 'starten')} <span class="note">(${dur(S.now - b.started)})</span></div>`;
+  else if (b.status === 'error') h = `<div class="msg err">De backtest is mislukt: ${esc(b.error)}</div>`;
+  else if (b.status === 'done') h = resultPanel(b.result, 'Resultaat');
+  $('bt-status').innerHTML = h;
+}
+
+function renderPaper() {
+  const p = S.paper, st = p.status, live = p.live;
+  let top = '';
+  if (st === 'idle' || st === 'done' || st === 'error') {
+    if (st === 'error') top += `<div class="msg err">Paper-trading is gestopt met een fout: ${esc(p.error)}</div>`;
+    if (st === 'done') top += resultPanel(p.result, 'Laatste sessie');
+    top += `<div class="panel"><div class="row"><button class="primary" onclick="api('/api/paper/start', {})">Start paper-trading</button><span class="note">Start met ${eur(S.settings.initial_capital_eur, 0)} nepgeld: de helft in bitcoin, de helft in euro's.</span></div></div>`;
+  } else if (st === 'starting') top = '<div class="msg"><span class="spinner"></span>Verbinden met Bitvavo…</div>';
+  else {
+    const f = p.feed || {};
+    const feed = f.stale ? `<span class="badge warn">Feed hapert: ${esc(f.stale)} — transacties gepauzeerd</span>` : '<span class="badge ok">Live verbonden</span>';
+    top = `<div class="panel"><div class="row">${st === 'stopping' ? '<span><span class="spinner"></span>Stoppen en rapport maken…</span>' : '<button class="danger" onclick="stopPaper()">Stop en maak rapport</button>'}
+      ${feed}<span class="note">loopt ${dur(S.now - p.started)}${f.reconnects ? ' · ' + f.reconnects + '× opnieuw verbonden' : ''}</span></div></div>`;
+    if (!live) top += '<div class="msg"><span class="spinner"></span>Wachten op de eerste koers…</div>';
+  }
+  $('paper-top').innerHTML = top;
+  $('paper-live').style.display = live ? '' : 'none';
+  $('paper-logbox').style.display = p.log && p.log.length ? '' : 'none';
+  $('paper-log').textContent = (p.log || []).join('\n');
+  if (!live) return;
+  const alpha = live.equity - live.bench_rebal, pnl = live.equity - live.start_capital;
+  const halt = Object.entries(live.halted).filter(([k, v]) => v && v !== 'post_only').map(([k, v]) => (k === 'down' ? 'bijkopen' : 'bijverkopen') + ' gestopt (' + ({drift: 'verhouding BTC/EUR op limiet', reserve: 'reserve op limiet'}[v] || v) + ')');
+  $('paper-cards').innerHTML =
+    card('Bitcoinkoers', eur(live.price, 0), `start ${eur(live.start_price, 0)} · ${pct((live.price / live.start_price - 1) * 100)}`) +
+    card('Waarde portefeuille', eur(live.equity), `${seur(pnl)} sinds start`, pnl) +
+    card('Extra t.o.v. herbalanceren', seur(alpha), 'het eerlijke vergelijk', alpha) +
+    card('Transacties', num(live.n_fills), `${num(live.n_cycles)} afgeronde rondes · winst ${eur(live.cycle_profit)}`) +
+    card('Verhouding', nf(1).format(live.btc_weight * 100) + '% BTC', `limieten ${num(live.min_weight * 100)}% – ${num(live.max_weight * 100)}%`) +
+    card('Raster', `${eur(live.window[0], 0)} – ${eur(live.window[1], 0)}`, halt.length ? halt.join(', ') : `stap ${nf(2).format(live.step_pct * 100)}% · ${eur(live.order_size)} per order`);
+  $('paper-orders').innerHTML = (p.orders || []).map(o => `<tr><td class="side ${o.side}">${o.side === 'buy' ? '▲ Kopen' : '▼ Verkopen'}</td><td class="num">${eur(o.price, 0)}</td><td class="num">${o.amount.toFixed(8)}</td><td class="num">${eur(o.price * o.amount)}</td></tr>`).join('');
+  $('paper-fills').innerHTML = (p.fills || []).length ? p.fills.map(f => `<tr><td>${clock(f.ts)}</td><td class="side ${f.side}">${f.side === 'buy' ? '▲ Gekocht' : '▼ Verkocht'}</td><td class="num">${eur(f.price, 0)}</td><td class="num">${eur(f.cost)}</td><td class="num">${f.pnl === null ? '' : seur(f.pnl, 3)}</td></tr>`).join('')
+    : '<tr><td colspan="5" class="muted">Nog geen transacties. De koers moet eerst één rasterstap bewegen.</td></tr>';
+  drawPaperChart(p);
+}
+function drawPaperChart(p) {
+  const s = p.series; if (!s || page !== 'paper' || !window.Plotly) return;
+  const key = s.ts.length + ':' + s.ts[s.ts.length - 1] + ':' + (p.fills || []).length; if (key === lastChartKey) return; lastChartKey = key;
+  const x = s.ts.map(t => new Date(t)), mk = side => (p.fills || []).filter(f => f.side === side);
+  const band = {color: '#9085e9', width: 1.25, shape: 'hv'};
+  const traces = [
+    {x, y: s.hi, mode: 'lines', name: 'Raster boven', line: band, hovertemplate: '€ %{y:,.0f}<extra>raster boven</extra>'},
+    {x, y: s.lo, mode: 'lines', name: 'Raster onder', line: {...band, dash: 'dot'}, fill: 'tonexty', fillcolor: 'rgba(144,133,233,0.07)', hovertemplate: '€ %{y:,.0f}<extra>raster onder</extra>'},
+    {x, y: s.price, mode: 'lines', name: 'Koers', line: {color: '#c3c2b7', width: 2}, hovertemplate: '€ %{y:,.0f}<extra>koers</extra>'},
+    {x: mk('buy').map(f => new Date(f.ts)), y: mk('buy').map(f => f.price), mode: 'markers', name: 'Gekocht', marker: {symbol: 'triangle-up', size: 10, color: '#0ca30c', line: {color: '#1a1a19', width: 1}}, hovertemplate: 'gekocht € %{y:,.0f}<extra></extra>'},
+    {x: mk('sell').map(f => new Date(f.ts)), y: mk('sell').map(f => f.price), mode: 'markers', name: 'Verkocht', marker: {symbol: 'triangle-down', size: 10, color: '#e66767', line: {color: '#1a1a19', width: 1}}, hovertemplate: 'verkocht € %{y:,.0f}<extra></extra>'}];
+  const axis = {gridcolor: '#2c2c2a', linecolor: '#2c2c2a', zeroline: false, tickfont: {color: '#898781'}};
+  Plotly.react('paper-chart', traces, {paper_bgcolor: '#1a1a19', plot_bgcolor: '#1a1a19', margin: {l: 60, r: 16, t: 8, b: 32}, showlegend: false, separators: ',.',
+    font: {color: '#c3c2b7', size: 12}, xaxis: {...axis, type: 'date'}, yaxis: {...axis, type: 'linear', tickprefix: '€ '}, hovermode: 'x unified', hoverlabel: {bgcolor: '#262624', bordercolor: '#2c2c2a', font: {color: '#f0efec'}}},
+    {displayModeBar: false, responsive: true});
+}
+async function stopPaper() { if (confirm('Paper-trading stoppen en het rapport maken?')) await api('/api/paper/stop', {}); }
+
+function renderRecord() {
+  const r = S.recorder, running = r.status === 'running';
+  $('rec-start').style.display = running ? 'none' : ''; $('rec-stop').style.display = running ? '' : 'none';
+  let h = '';
+  if (running) h = `<span class="spinner"></span><b>Opname loopt</b> · ${dur(S.now - r.started)}${r.duration ? ' van ' + dur(r.duration) : ''} · ${num((r.counts || {}).book || 0)} prijswijzigingen · ${num((r.counts || {}).trade || 0)} transacties` + (r.stale ? ` <span class="badge warn">${esc(r.stale)}</span>` : '');
+  else if (r.status === 'error') h = `<span class="badge err">Opname mislukt: ${esc(r.error)}</span>`;
+  else if (r.status === 'done') h = `<span class="badge ok">Opname klaar</span> <span class="note">${esc(S.rec_log[S.rec_log.length - 1] || '')}</span>`;
+  $('rec-status').innerHTML = h;
+  $('rec-list').innerHTML = S.recordings.length ? `<table><thead><tr><th>Gemaakt</th><th>Bestand</th><th class="num">Grootte</th><th></th></tr></thead><tbody>` + S.recordings.map(x =>
+    `<tr><td>${when(x.mtime * 1000)}</td><td>${esc(x.name)}</td><td class="num">${size(x.size)}</td><td class="num">${x.active ? '<span class="badge ok">loopt</span>' :
+      `<button class="small" onclick="backtestRecording('${esc(x.name)}')">Backtest hierop</button> <button class="small danger" onclick="delRecording('${esc(x.name)}')">Verwijder</button>`}</td></tr>`).join('') + '</tbody></table>'
+    : '<span class="muted">Nog geen opnames.</span>';
+}
+async function backtestRecording(name) { await api('/api/backtest', {recording: name}); go('backtest'); }
+async function delRecording(name) { if (confirm('Opname ' + name + ' definitief verwijderen?')) await api('/api/recordings/delete', {name}); }
+
+function renderReports() {
+  $('rep-list').innerHTML = S.reports.length ? `<div class="scroll" style="max-height:none"><table><thead><tr><th>Gemaakt</th><th>Soort</th><th>Periode</th><th class="num">Resultaat bot</th><th class="num">Extra t.o.v. herbalanceren</th><th class="num">Rondes</th><th></th></tr></thead><tbody>` +
+    S.reports.map(r => { const k = r.final_equity !== undefined; return `<tr style="cursor:pointer" onclick="openReport('${esc(r.file)}')"><td>${when(r.mtime * 1000)}</td><td>${MODE[r.mode] || r.mode}</td>
+      <td>${k ? day(r.start) + ' – ' + day(r.end) : '<span class="muted">–</span>'}</td><td class="num">${k ? pct(r.return_pct) : ''}</td>
+      <td class="num">${k ? `<span class="${r.alpha_eur >= 0 ? 'up' : 'down'}">${r.alpha_eur >= 0 ? '▲' : '▼'}</span> ${seur(r.alpha_eur)}` : ''}</td><td class="num">${k ? num(r.n_cycles) : ''}</td>
+      <td class="num"><button class="small" onclick="openReport('${esc(r.file)}')">Bekijk</button> <button class="small danger" onclick="event.stopPropagation();delReport('${esc(r.file)}')">Verwijder</button></td></tr>`; }).join('') + '</tbody></table></div>'
+    : '<span class="muted">Nog geen rapporten. Draai eerst een backtest.</span>';
+}
+async function delReport(file) { if (confirm('Dit rapport definitief verwijderen?')) await api('/api/reports/delete', {file}); }
+
+/* ---------- settings ---------- */
+const FIELDS = [
+  {k: 'initial_capital_eur', l: 'Startkapitaal', u: '€', s: 1, step: 100, h: 'Nepgeld waarmee de bot begint: de helft in bitcoin, de helft in euro\'s.'},
+  {k: 'orders_per_side', l: 'Orders per kant', u: '', s: 1, step: 1, h: 'Aantal kooporders onder de koers en verkooporders erboven.'},
+  {k: 'active_fraction', l: 'Deel dat in orders staat', u: '%', s: 100, step: 1, h: 'De rest is reserve, zodat het raster met de koers kan meeschuiven.'},
+  {k: 'grid_step_pct', l: 'Afstand tussen orders', u: '%', s: 100, step: 0.05, h: 'Kleiner = vaker handelen met minder winst per keer. Wordt automatisch verhoogd als de kosten anders de winst opeten.'},
+  {k: 'maker_fee_override', l: 'Handelskosten', u: '%', s: 100, step: 0.01, optional: 'automatisch van Bitvavo', h: 'Leeg laten = het standaardtarief van Bitvavo. Vul bv. 0 in als je account 0% betaalt.'},
+  {k: 'profit_split_btc', l: 'Winst bewaren als bitcoin', u: '%', s: 100, step: 5, h: 'De rest van de winst blijft in euro\'s. 50 laat beide voorraden per ronde groeien.'},
+  {k: 'min_btc_weight', l: 'Minimaal aandeel bitcoin', u: '%', s: 100, step: 1, h: 'Veiligheidsgrens: de bot verkoopt niet verder dan dit.'},
+  {k: 'max_btc_weight', l: 'Maximaal aandeel bitcoin', u: '%', s: 100, step: 1, h: 'Veiligheidsgrens: de bot koopt bij een daling niet verder bij dan dit.'},
+  {k: 'max_reserve_usage', l: 'Maximaal gebruik van de reserve', u: '%', s: 100, step: 5, h: 'Hoeveel van de reserve het meeschuiven mag aanspreken.'},
+  {k: 'rebalance_interval_hours', l: 'Vergelijking: herbalanceer elke', u: 'uur', s: 1, step: 1, h: 'Alleen voor de vergelijkingslijn in het rapport.'},
+];
+function fillForm(values) {
+  $('set-form').innerHTML = FIELDS.map(f => `<div class="field"><label for="f-${f.k}">${f.l}</label><div class="withunit"><input id="f-${f.k}" type="number" step="${f.step}" ${f.optional ? `placeholder="${f.optional}"` : ''}><span>${f.u}</span></div><div class="help">${f.h}</div></div>`).join('') +
+    `<div class="field"><label><input type="checkbox" id="f-fill_on_touch">Soepel vulmodel</label><div class="help">Uit (aanbevolen): een order telt pas als de koers er echt doorheen gaat. Aan: ook als de koers hem precies raakt — optimistischer.</div></div>`;
+  FIELDS.forEach(f => { const v = values[f.k]; $('f-' + f.k).value = v === null || v === undefined ? '' : +(v * f.s).toFixed(6); });
+  $('f-fill_on_touch').checked = !!values.fill_on_touch; formFilled = true;
+}
+function readForm() {
+  const out = {fill_on_touch: $('f-fill_on_touch').checked};
+  FIELDS.forEach(f => { const raw = $('f-' + f.k).value.trim().replace(',', '.'); out[f.k] = raw === '' ? null : Number(raw) / f.s; });
+  return out;
+}
+function renderSettings() {
+  if (!formFilled) fillForm(S.settings);
+  const d = S.derived, lifted = d.effective_step_pct > S.settings.grid_step_pct + 1e-12, small = d.order_size_eur < d.min_cost * 1.05;
+  $('set-derived').className = 'msg' + (small ? ' err' : '');
+  $('set-derived').innerHTML = `Opgeslagen instellingen: <b>${eur(d.order_size_eur)}</b> per order · handelskosten <b>${nf(2).format(d.maker_fee * 100)}%</b> (${esc(d.fee_source || 'standaard')}) · kleinste zinvolle stap <b>${nf(2).format(d.min_step_pct * 100)}%</b> · gebruikte stap <b>${nf(2).format(d.effective_step_pct * 100)}%</b>` +
+    (lifted ? '<br>Let op: je gekozen afstand is kleiner dan de kosten toelaten en wordt automatisch verhoogd.' : '') +
+    (small ? `<br>Let op: een order is kleiner dan het Bitvavo-minimum van ${eur(d.min_cost)}. Verhoog het startkapitaal of verlaag het aantal orders.` : '');
+  const c = S.check; let h = '';
+  if (c.status === 'running') h = '<span class="spinner"></span>Bezig, duurt ongeveer 15 seconden…';
+  else if (c.status === 'error') h = `<span class="badge err">Mislukt: ${esc(c.error)}</span>`;
+  else if (c.status === 'done') h = c.ok ? `<span class="badge ok">Alles werkt</span> <span class="note">koers ${eur(c.bid, 0)} · ${c.live.book} prijsupdates en ${c.live.trade} transacties ontvangen</span>` : '<span class="badge warn">Niet alle onderdelen reageerden</span>';
+  $('check-out').innerHTML = h; $('check-run').disabled = c.status === 'running';
+}
+
+function render() {
+  if (!S) return;
+  const busy = {backtest: S.backtest.status === 'running', paper: ['starting', 'running', 'stopping'].includes(S.paper.status), record: S.recorder.status === 'running'};
+  document.querySelectorAll('nav a').forEach(a => a.classList.toggle('busy', !!busy[a.dataset.page]));
+  ({home: renderHome, backtest: renderBacktest, paper: renderPaper, record: renderRecord, reports: renderReports, settings: renderSettings}[page] || (() => {}))();
+}
+async function poll() {
+  try { const res = await fetch('/api/state'); S = await res.json(); $('conn').textContent = 'server actief'; render(); }
+  catch (e) { $('conn').textContent = 'server niet bereikbaar'; }
+  setTimeout(poll, page === 'paper' || (S && S.backtest.status === 'running') ? 1500 : 3000);
+}
+
+/* ---------- wiring ---------- */
+document.querySelectorAll('nav a').forEach(a => a.addEventListener('click', () => go(a.dataset.page)));
+document.querySelectorAll('[data-go]').forEach(e => e.addEventListener('click', () => go(e.dataset.go)));
+window.addEventListener('hashchange', () => { const p = location.hash.slice(1); if ($(p) && p !== page && p !== 'viewer') go(p); });
+$('bt-days').innerHTML = [[7, '1 week'], [30, '1 maand'], [90, '3 maanden'], [180, '6 maanden'], [365, '1 jaar']].map(([d, l]) => `<button data-d="${d}" class="${d === btDays ? 'on' : ''}">${l}</button>`).join('');
+$('bt-days').addEventListener('click', e => { if (!e.target.dataset.d) return; btDays = +e.target.dataset.d; document.querySelectorAll('#bt-days button').forEach(b => b.classList.toggle('on', +b.dataset.d === btDays)); });
+$('bt-start').addEventListener('click', () => api('/api/backtest', {days: btDays, timeframe: $('bt-tf').value}));
+$('rec-start').addEventListener('click', () => api('/api/record/start', {minutes: $('rec-min').value || null}));
+$('rec-stop').addEventListener('click', () => api('/api/record/stop', {}));
+$('view-back').addEventListener('click', () => go('reports'));
+$('set-save').addEventListener('click', async () => { await api('/api/settings', readForm()); fillForm(S.settings); toast('Instellingen opgeslagen'); });
+$('set-reset').addEventListener('click', () => { fillForm(S.derived.defaults); $('set-note').textContent = 'Standaardwaarden ingevuld — klik Opslaan om ze te gebruiken.'; });
+$('check-run').addEventListener('click', () => api('/api/check', {}));
+$('srv-stop').addEventListener('click', async () => {
+  if (!confirm('De server stoppen? Lopende sessies worden afgesloten.')) return;
+  await fetch('/api/shutdown', {method: 'POST'});
+  document.querySelector('main').innerHTML = '<h1>Server gestopt</h1><p class="lead">Je kunt dit tabblad sluiten. Start opnieuw door te dubbelklikken op <b>start.command</b>.</p>';
+});
+const first = location.hash.slice(1); go($(first) && first !== 'viewer' ? first : 'home');
+poll();
+</script>
+</body>
+</html>
